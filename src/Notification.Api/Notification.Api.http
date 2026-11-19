@@ -1,0 +1,11 @@
+@Notification.Api_HostAddress = http://localhost:5047
+
+GET {{Notification.Api_HostAddress}}/swagger/v1/swagger.json
+Accept: application/json
+
+###
+
+POST {{Notification.Api_HostAddress}}/api/campaigns/1/start
+Content-Type: application/json
+
+###

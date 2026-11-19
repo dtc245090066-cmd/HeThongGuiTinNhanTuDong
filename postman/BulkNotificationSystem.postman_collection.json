@@ -1,0 +1,666 @@
+{
+  "info": {
+    "_postman_id": "d84bf211-2170-4b56-a785-e3bd59346e1f",
+    "name": "BulkNotificationSystem",
+    "description": "Postman tests for the Campaign API. Set baseUrl to the Notification.Api localhost URL before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5047",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "campaignId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "emptyCampaignId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  const runIdMoi = pm.environment.get('runId') || pm.variables.replaceIn('{{$guid}}');",
+          "  pm.collectionVariables.set('runId', runIdMoi);",
+          "}",
+          "const runId = pm.collectionVariables.get('runId');",
+          "pm.collectionVariables.set('tenChienDich', `Postman-${runId}`);",
+          "pm.collectionVariables.set('emailNguoiNhan1', `nguoinhan1-${runId}@example.com`);",
+          "pm.collectionVariables.set('emailNguoiNhan2', `nguoinhan2-${runId}@example.com`);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Tao chien dich hop le",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenChienDich\": \"{{tenChienDich}}\",\n  \"tieuDe\": \"Thong bao lich bao tri\",\n  \"noiDung\": \"He thong se bao tri vao toi nay.\",\n  \"danhSachNguoiNhan\": [\n    { \"hoTen\": \"Nguyen Van A\", \"diaChiEmail\": \"{{emailNguoiNhan1}}\" },\n    { \"hoTen\": \"Tran Thi B\", \"diaChiEmail\": \"{{emailNguoiNhan2}}\" },\n    { \"hoTen\": \"Le Van C\", \"diaChiEmail\": \"nguoinhan3-{{runId}}@example.com\" },\n    { \"hoTen\": \"Pham Thi D\", \"diaChiEmail\": \"nguoinhan4-{{runId}}@example.com\" },\n    { \"hoTen\": \"Hoang Van E\", \"diaChiEmail\": \"nguoinhan5-{{runId}}@example.com\" }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Tra ve 201 Created', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Co ma chien dich va 5 nguoi nhan', function () {",
+              "  pm.expect(body.ma).to.be.a('number');",
+              "  pm.expect(body.soLuongNguoiNhan).to.eql(5);",
+              "  pm.expect(body.nguoiNhans).to.have.lengthOf(5);",
+              "});",
+              "pm.test('Co header Location', function () { pm.response.to.have.header('Location'); });",
+              "pm.collectionVariables.set('campaignId', String(body.ma));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1a. Bat dau chien dich",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}/start",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns",
+            "{{campaignId}}",
+            "start"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Bat dau chien dich tra 202 Accepted', function () { pm.response.to.have.status(202); });",
+              "const body = pm.response.json();",
+              "pm.test('Da tao Delivery va dua message vao queue', function () {",
+              "  pm.expect(body.tongSoNguoiNhan).to.eql(5);",
+              "  pm.expect(body.soDeliveryDuocTao).to.eql(5);",
+              "  pm.expect(body.soMessageDaDuaVaoQueue).to.eql(5);",
+              "  pm.expect(body.soMessageChuaDuaVaoQueue).to.eql(0);",
+              "  pm.expect(body.trangThai).to.eql('Queued');",
+              "  pm.expect(body.thongBao).to.include('Chua co email nao duoc gui');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1b. Bat dau lai chien dich da xep hang doi",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}/start",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns",
+            "{{campaignId}}",
+            "start"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Khong tao lai Delivery, tra 409 Conflict', function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Tao chien dich thieu ten",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tieuDe\": \"Thong bao\",\n  \"noiDung\": \"Noi dung\",\n  \"danhSachNguoiNhan\": [\n    { \"hoTen\": \"Nguoi Nhan\", \"diaChiEmail\": \"thieuten-{{runId}}@example.com\" }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Thieu ten bi tu choi voi 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Co thong tin loi validation', function () { pm.expect(pm.response.json()).to.have.property('errors'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tao chien dich thieu tieu de",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenChienDich\": \"Thieu tieu de {{runId}}\",\n  \"noiDung\": \"Noi dung\",\n  \"danhSachNguoiNhan\": [\n    { \"hoTen\": \"Nguoi Nhan\", \"diaChiEmail\": \"thieutieude-{{runId}}@example.com\" }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Thieu tieu de bi tu choi voi 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Co thong tin loi validation', function () { pm.expect(pm.response.json()).to.have.property('errors'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Tao chien dich thieu noi dung",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenChienDich\": \"Thieu noi dung {{runId}}\",\n  \"tieuDe\": \"Thong bao\",\n  \"danhSachNguoiNhan\": [\n    { \"hoTen\": \"Nguoi Nhan\", \"diaChiEmail\": \"thieunoidung-{{runId}}@example.com\" }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Thieu noi dung bi tu choi voi 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Co thong tin loi validation', function () { pm.expect(pm.response.json()).to.have.property('errors'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Tao chien dich danh sach nguoi nhan rong",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenChienDich\": \"Danh sach rong {{runId}}\",\n  \"tieuDe\": \"Thong bao\",\n  \"noiDung\": \"Noi dung\",\n  \"danhSachNguoiNhan\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Danh sach rong bi tu choi voi 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Co thong tin loi validation', function () { pm.expect(pm.response.json()).to.have.property('errors'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Tao chien dich email sai dinh dang",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenChienDich\": \"Email sai {{runId}}\",\n  \"tieuDe\": \"Thong bao\",\n  \"noiDung\": \"Noi dung\",\n  \"danhSachNguoiNhan\": [\n    { \"hoTen\": \"Nguoi Nhan\", \"diaChiEmail\": \"khong-phai-email\" }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Email sai bi tu choi voi 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Co thong tin loi validation', function () { pm.expect(pm.response.json()).to.have.property('errors'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Lay danh sach chien dich",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Lay danh sach tra 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Danh sach co chien dich vua tao', function () {",
+              "  const danhSach = pm.response.json();",
+              "  pm.expect(danhSach).to.be.an('array');",
+              "  pm.expect(danhSach.some(item => String(item.ma) === pm.collectionVariables.get('campaignId'))).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Xem chi tiet chien dich vua tao",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns",
+            "{{campaignId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Chi tiet tra 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Chi tiet co 5 nguoi nhan', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.soLuongNguoiNhan).to.eql(5);",
+              "  pm.expect(body.nguoiNhans).to.have.lengthOf(5);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Xem chien dich khong ton tai",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/campaigns/2147483647",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "campaigns",
+            "2147483647"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Khong tim thay chien dich tra 404', function () { pm.response.to.have.status(404); });",
+              "pm.test('Response co thong bao loi', function () { pm.expect(pm.response.json()).to.have.property('detail'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Kiem tra loi API bat dau",
+      "item": [
+        {
+          "name": "Bat dau chien dich khong co nguoi nhan (can emptyCampaignId)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('emptyCampaignId')) {",
+                  "  console.log('Bo qua: hay tao mot Campaign khong co Recipient trong SQL Server va dat emptyCampaignId.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Chien dich khong co nguoi nhan tra 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Response giai thich loi', function () { pm.expect(pm.response.json().detail).to.include('it nhat mot nguoi nhan'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{emptyCampaignId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "campaigns",
+                "{{emptyCampaignId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Bat dau chien dich khong ton tai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Chien dich khong ton tai tra 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Response co thong bao', function () { pm.expect(pm.response.json().detail).to.include('Khong tim thay'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/2147483647/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "campaigns",
+                "2147483647",
+                "start"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Kiem tra khi RabbitMQ mat ket noi",
+      "item": [
+        {
+          "name": "Bat dau khi RabbitMQ dang tat",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('rabbitDownCampaignId')) { pm.execution.skipRequest(); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RabbitMQ mat ket noi tra 503', function () { pm.response.to.have.status(503); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Delivery chua publish duoc ghi nhan de thu lai', function () {",
+                  "  pm.expect(body.trangThai).to.eql('Draft');",
+                  "  pm.expect(body.soDeliveryDuocTao).to.be.greaterThan(0);",
+                  "  pm.expect(body.soMessageChuaDuaVaoQueue).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{rabbitDownCampaignId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "campaigns",
+                "{{rabbitDownCampaignId}}",
+                "start"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Thu lai sau khi RabbitMQ hoat dong",
+      "item": [
+        {
+          "name": "Thu lai Delivery chua publish",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('rabbitDownCampaignId')) { pm.execution.skipRequest(); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sau phuc hoi, publish tra 202', function () { pm.response.to.have.status(202); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Khong tao lai Delivery, chien dich duoc xep hang doi', function () {",
+                  "  pm.expect(body.trangThai).to.eql('Queued');",
+                  "  pm.expect(body.soDeliveryDuocTao).to.eql(0);",
+                  "  pm.expect(body.soMessageDaDuaVaoQueue).to.be.greaterThan(0);",
+                  "  pm.expect(body.soMessageChuaDuaVaoQueue).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{rabbitDownCampaignId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "campaigns",
+                "{{rabbitDownCampaignId}}",
+                "start"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
