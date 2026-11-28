@@ -38,7 +38,75 @@ POST {{Campaign.Api_HostAddress}}/api/campaigns
 Content-Type: application/json
 
 {
+  "name": " ",
+  "content": "A whitespace-only name is invalid."
+}
+
+###
+
+POST {{Campaign.Api_HostAddress}}/api/campaigns
+Content-Type: application/json
+
+{
   "name": "Missing Content"
 }
+
+###
+
+@campaignId = replace-with-campaign-guid
+
+GET {{Campaign.Api_HostAddress}}/api/campaigns/{{campaignId}}
+Accept: application/json
+
+###
+
+@missingId = 00000000-0000-0000-0000-000000000001
+
+GET {{Campaign.Api_HostAddress}}/api/campaigns/{{missingId}}
+Accept: application/json
+
+###
+
+GET {{Campaign.Api_HostAddress}}/api/campaigns/{{campaignId}}/messages
+Accept: application/json
+
+###
+
+POST {{Campaign.Api_HostAddress}}/api/campaigns/{{campaignId}}/messages
+Content-Type: application/json
+
+{
+  "content": "Your order is ready."
+}
+
+###
+
+POST {{Campaign.Api_HostAddress}}/api/campaigns/{{campaignId}}/messages
+Content-Type: application/json
+
+{
+  "content": " "
+}
+
+###
+
+POST {{Campaign.Api_HostAddress}}/api/campaigns/{{missingId}}/messages
+Content-Type: application/json
+
+{
+  "content": "The campaign does not exist."
+}
+
+###
+
+@messageId = replace-with-message-guid
+
+GET {{Campaign.Api_HostAddress}}/api/messages/{{messageId}}
+Accept: application/json
+
+###
+
+GET {{Campaign.Api_HostAddress}}/api/messages/{{missingId}}
+Accept: application/json
 
 ###
